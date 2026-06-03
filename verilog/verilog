@@ -1,0 +1,192 @@
+// AFA_controller.v
+// Contrôleur matériel pour la syntaxe AFA
+// 15 instructions : 0V, 5V, >>, {}, &, G, GD, *, %, ?, !, TP, ~, ON, OOF
+
+module AFA_controller (
+    input wire clk,           // horloge système ~
+    input wire reset,         // reset (ON)
+    
+    // Entrées capteurs
+    input wire [7:0] temperature,   // * capteur température
+    input wire [7:0] puissance,     // % puissance
+    input wire radar,               // ? présence
+    input wire front,               // ! front
+    
+    // Sorties actionneurs
+    output reg [7:0] moteur,        // moteur (0V/5V)
+    output reg led,                 // LED (0V/5V)
+    output reg [7:0] puissance_out, // sortie puissance %
+    
+    // État interne
+    output reg [7:0] bascule        // {} stockage 1 bit (étendu à 8 bits pour usage général)
+);
+
+// ROM firmware (16 instructions, 5 bits chacune)
+// Exemple: firmware de test (température + moteur + LED)
+reg [4:0] rom [0:15];
+
+// Compteur programme (PC)
+reg [3:0] pc;
+reg [3:0] pc_next;
+
+// Initialisation du firmware
+initial begin
+    // Adresse 0: ON
+    rom[0] = 5'b01101;
+    // Adresse 1: &
+    rom[1] = 5'b00100;
+    // Adresse 2: *
+    rom[2] = 5'b00111;
+    // Adresse 3: >>
+    rom[3] = 5'b00010;
+    // Adresse 4: G
+    rom[4] = 5'b00101;
+    // Adresse 5: 5V
+    rom[5] = 5'b00001;
+    // Adresse 6: >>
+    rom[6] = 5'b00010;
+    // Adresse 7: 5V
+    rom[7] = 5'b00001;
+    // Adresse 8: >>
+    rom[8] = 5'b00010;
+    // Adresse 9: GD
+    rom[9] = 5'b00110;
+    // Adresse 10: 0V
+    rom[10] = 5'b00000;
+    // Adresse 11: >>
+    rom[11] = 5'b00010;
+    // Adresse 12: 0V
+    rom[12] = 5'b00000;
+    // Adresse 13: >>
+    rom[13] = 5'b00010;
+    // Adresse 14: &
+    rom[14] = 5'b00100;
+    // Adresse 15: OOF (pas utilisé ici)
+    rom[15] = 5'b01110;
+end
+
+// Opcode courant
+wire [4:0] opcode = rom[pc];
+
+// Pointeur actuel (pour >>)
+reg [7:0] pointeur;
+
+// Temporisation
+reg [23:0] timer;
+reg temporisation_active;
+
+// Front
+reg dernier_front;
+
+// Gestion du PC (compteur programme)
+always @(*) begin
+    pc_next = pc + 1;
+    if (opcode == 5'b00100) begin  // & (boucle)
+        pc_next = 4'd1;  // retour à l'adresse du premier & (adresse 1)
+    end
+    if (opcode == 5'b01110) begin  // OOF (arrêt)
+        pc_next = pc;  // on reste sur place, plus rien ne s'exécute
+    end
+end
+
+always @(posedge clk or posedge reset) begin
+    if (reset) begin
+        pc <= 0;
+        moteur <= 0;
+        led <= 0;
+        puissance_out <= 0;
+        bascule <= 0;
+        timer <= 0;
+        temporisation_active <= 0;
+        dernier_front <= 0;
+    end else begin
+        pc <= pc_next;
+        
+        // Gestion de TP (temporisation)
+        if (temporisation_active) begin
+            timer <= timer - 1;
+            if (timer == 0) temporisation_active <= 0;
+        end
+        
+        // Gestion de ! (front)
+        dernier_front <= front;
+        
+        // Décodage et exécution des instructions
+        case (opcode)
+            5'b00000: begin  // 0V
+                if (pointeur == 8'd1) moteur <= 0;
+                if (pointeur == 8'd2) led <= 0;
+                if (pointeur == 8'd3) puissance_out <= 0;
+            end
+            
+            5'b00001: begin  // 5V
+                if (pointeur == 8'd1) moteur <= 255;
+                if (pointeur == 8'd2) led <= 1;
+                if (pointeur == 8'd3) puissance_out <= 255;
+            end
+            
+            5'b00010: begin  // >> (pointeur)
+                // L'opérande est dans l'instruction suivante (simplifié)
+                // Ici on simule avec une valeur fixe pour l'exemple
+                pointeur <= 8'd1;  // 1 = moteur, 2 = LED, 3 = puissance
+            end
+            
+            5'b00011: begin  // {} bascule
+                bascule <= ~bascule;
+            end
+            
+            5'b00100: begin  // & (boucle) - déjà gérée dans PC
+            end
+            
+            5'b00101: begin  // G (comparateur égal)
+                if (temperature == 8'd50) begin  // seuil à 50°C
+                    // déclenche l'action suivante
+                end
+            end
+            
+            5'b00110: begin  // GD (comparateur différent)
+                if (temperature != 8'd50) begin
+                    // déclenche l'action suivante
+                end
+            end
+            
+            5'b00111: begin  // * température
+                // la température est déjà disponible sur l'entrée
+                // on peut la stocker dans bascule si besoin
+                bascule <= temperature;
+            end
+            
+            5'b01000: begin  // % puissance
+                bascule <= puissance;
+            end
+            
+            5'b01001: begin  // ? radar
+                bascule <= {7'b0, radar};
+            end
+            
+            5'b01010: begin  // ! front
+                if (front && !dernier_front) begin
+                    bascule <= 1;
+                end
+            end
+            
+            5'b01011: begin  // TP temporisation
+                timer <= 24'd1000000;  // temporisation
+                temporisation_active <= 1;
+            end
+            
+            5'b01100: begin  // ~ horloge (déjà gérée par le clk)
+            end
+            
+            5'b01101: begin  // ON (reset)
+                // déjà géré par le signal reset externe
+            end
+            
+            5'b01110: begin  // OOF (arrêt)
+                // bloquer le PC (déjà fait)
+            end
+        endcase
+    end
+end
+
+endmodule

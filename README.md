@@ -51,7 +51,8 @@
 | OOF Arrêt complet
 
 
-# 
+# Syntaxe
+
 0V 
 5V 
 >>

@@ -51,5 +51,20 @@
 | OOF Arrêt complet
 
 
-# 0V  5V  >>  {}  &  G  GD  *  %  ?  !  TP  ~  ON  OOF
+# 
+0V 
+5V 
+>>
+{}
+&
+G
+GD
+*
+%
+?
+!
+TP
+~
+ON
+OOF
 

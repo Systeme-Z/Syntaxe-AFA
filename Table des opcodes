@@ -1,0 +1,24 @@
+# Table des opcodes AFA Version contrôle matériel (5bits)
+
+Symbole Opcode (5 bits) Action
+0V 00000 Mets à 0 volt
+5V 00001 Mets à 5 volts
+>> 00010 Pointeur vers actionneur/capteur
+{} 00011 Bascule (stockage état)
+& 00100 Boucle infinie
+G 00101 Comparateur (égal)
+GD 00110 Comparateur (différent)
+* 00111 Capteur température
+% 01000 Capteur puissance
+? 01001 Capteur radar / distance
+! 01010 Détection de front
+TP 01011 Temporisation
+~ 01100 Cycle d’horloge
+ON 01101 Démarrage / reset
+OOF 01110 Arrêt complet
+
+# Récapitulatif
+
+15 commandes
+ Opcodes de 00000 à 01110
+ Il reste 17 codes libres (01111 à 11111) pour extensions futures

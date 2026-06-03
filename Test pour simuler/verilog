@@ -1,1 +1,31 @@
 
+// AFA_tb.v
+module AFA_tb;
+    reg clk;
+    reg reset;
+    reg [7:0] temperature;
+    wire [7:0] moteur;
+    wire led;
+    
+    AFA_controller uut (
+        .clk(clk),
+        .reset(reset),
+        .temperature(temperature),
+        .moteur(moteur),
+        .led(led)
+    );
+    
+    always #5 clk = ~clk;
+    
+    initial begin
+        clk = 0;
+        reset = 1;
+        temperature = 0;
+        #20 reset = 0;
+        
+        #10 temperature = 30;
+        #100 temperature = 60;
+        #100 temperature = 40;
+        #100 $finish;
+    end
+endmodule

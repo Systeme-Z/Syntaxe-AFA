@@ -1,0 +1,10 @@
+ON
+&
+    * >> capteur_temp
+    G >> seuil
+    5V >> moteur
+    5V >> led
+    GD
+    0V >> moteur
+    0V >> led
+&

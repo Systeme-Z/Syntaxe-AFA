@@ -3,7 +3,9 @@
 
 # Commande de base
 | Symbole / Action
+
 | 0V Mets à 0 volt
+
 | 5V Mets à 5 volts
 | >> Pointeur vers actionneur/capteur
 | {} Bascule (stockage 1 bit / état)
